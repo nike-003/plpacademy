@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Joke Generator App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+
+        .joke-display {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2em;
+            color: #555;
+            border-left: 5px solid #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1em;
+            cursor: pointer;
+            margin: 10px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+
+        .input-group {
+            margin: 20px 0;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1em;
+            margin-bottom: 10px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .jokes-list {
+            text-align: left;
+            max-height: 200px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .joke-item {
+            padding: 10px;
+            border-bottom: 1px solid #e0e0e0;
+            color: #555;
+        }
+
+        .joke-item:last-child {
+            border-bottom: none;
+        }
+
+        .success-message {
+            color: #28a745;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .error-message {
+            color: #dc3545;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>😄 Joke Generator</h1>
+        
+        <div class="joke-display" id="jokeDisplay">
+            Click "Get Joke" to start laughing!
+        </div>
+        
+        <button class="btn" onclick="getJoke()">Get Joke</button>
+        <button class="btn" onclick="showAddJoke()">Add Joke</button>
+        <button class="btn" onclick="showAllJokes()">View All Jokes</button>
+        
+        <div id="addJokeSection" style="display: none;">
+            <div class="input-group">
+                <input type="text" id="newJoke" placeholder="Enter your joke here...">
+                <button class="btn" onclick="addJoke()">Add Joke</button>
+            </div>
+        </div>
+        
+        <div id="message"></div>
+        <div id="jokesList" class="jokes-list" style="display: none;"></div>
+    </div>
+
+    <script>
+        async function getJoke() {
+            try {
+                const response = await fetch('/get_joke');
+                const data = await response.json();
+                document.getElementById('jokeDisplay').textContent = data.joke;
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        function showAddJoke() {
+            const section = document.getElementById('addJokeSection');
+            const list = document.getElementById('jokesList');
+            section.style.display = section.style.display === 'none' ? 'block' : 'none';
+            list.style.display = 'none';
+        }
+
+        async function addJoke() {
+            const jokeText = document.getElementById('newJoke').value.trim();
+            if (!jokeText) {
+                showMessage('Please enter a joke!', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/add_joke', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ joke: jokeText })
+                });
+                const data = await response.json();
+                showMessage(data.message, data.success ? 'success' : 'error');
+                if (data.success) {
+                    document.getElementById('newJoke').value = '';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('Error adding joke', 'error');
+            }
+        }
+
+        async function showAllJokes() {
+            try {
+                const response = await fetch('/all_jokes');
+                const data = await response.json();
+                const list = document.getElementById('jokesList');
+                list.innerHTML = '';
+                
+                data.jokes.forEach((joke, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'joke-item';
+                    item.textContent = `${index + 1}. ${joke}`;
+                    list.appendChild(item);
+                });
+                
+                list.style.display = 'block';
+                document.getElementById('addJokeSection').style.display = 'none';
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        function showMessage(message, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = message;
+            messageDiv.className = type === 'success' ? 'success-message' : 'error-message';
+            setTimeout(() => {
+                messageDiv.textContent = '';
+                messageDiv.className = '';
+            }, 3000);
+        }
+    </script>
+</body>
+</html> 
